@@ -7,6 +7,17 @@ const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
+app.use((req,res,next) => {
+    console.log("Hello From Middleware 1");
+    next();
+});
+
+app.use((req,res,next) => {
+    console.log("Hello From Middleware 2");
+    // return res.end('Hey')    
+    next();
+});
+
 //routes
 app.get('/users', (req, res) => {
     const html = `
@@ -40,7 +51,7 @@ app.post('/api/users', (req, res) => {
 
     users.push({ ...body, id: users.length + 1 });
 
-    fs.writeFile('./MOCK_DATA.json', JSON.stringify(users, null, 2), (err) => {
+    fs.writeFile('./MOCK_DATA.json', JSON.stringify(users), (err) => {
         if (err) {
             return res.json({ status: "error" });
         }
