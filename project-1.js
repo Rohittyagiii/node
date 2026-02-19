@@ -1,99 +1,111 @@
 const express = require('express');
-const fs = require('fs');
 const mongoose = require('mongoose');
-const users = require('./MOCK_DATA.json');
 const app = express();
 
-//connection
-
+// Connection
 mongoose.connect('mongodb://127.0.0.1:27017/project-1')
 .then(() => console.log('MongoDB Connected'))
-.catch(err => console.log("Mongo Error",err))
+.catch(err => console.log("Mongo Error", err));
 
-//Schema
+// Schema
 const userSchema = new mongoose.Schema({
-    firstName:{
+    firstName: {
         type: String,
         required: true,
     },
-    lastName:{
-        type:String,
+    lastName: {
+        type: String,
     },
-    email:{
-        type:String,
-        required:true,
-        unique:true,
+    email: {
+        type: String,
+        required: true,
+        unique: true,
     },
-    jobTitle:{
-        type:String,
+    jobTitle: {
+        type: String,
     },
-    gender:{
-        type:String,
+    gender: {
+        type: String,
     },
-});
+}, { timestamps: true });
 
-const User =mongoose.model('user',userSchema)
+const User = mongoose.model('User', userSchema);
 
-// middleware
+// Middleware
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-app.use((req,res,next) => {
-    console.log("Hello From Middleware 1");
-    next();
-});
 
-app.use((req,res,next) => {
-    console.log("Hello From Middleware 2");
-    // return res.end('Hey')    
-    next();
-});
+// =========================
+// HTML Route
+// =========================
+app.get('/users', async (req, res) => {
+    const allDbUsers = await User.find({});
 
-//routes
-app.get('/users', (req, res) => {
     const html = `
-        <ul>
-            ${users.map(user => `<li>${user.first_name}</li>`).join("")}
-        </ul>
-    `;
+    <ul> 
+        ${allDbUsers.map(user => 
+            `<li>${user.firstName} - ${user.email}</li>`
+        ).join("")}
+    </ul>`;
+
     res.send(html);
 });
 
+
+// =========================
 // REST API
-app.get('/api/users', (req, res) => {
+// =========================
+
+// GET ALL USERS
+app.get('/api/users', async (req, res) => {
+    const users = await User.find({});
     return res.json(users);
 });
 
+// GET, UPDATE, DELETE by ID
 app.route("/api/users/:id")
-    .get((req, res) => {
-        const id = Number(req.params.id);
-        const user = users.find(user => user.id === id);
-        if(!user) return res.status(404).json({err: "User not foud"})
-        return res.json(user);
-    })
-    .patch((req, res) => {
-        return res.json({ status: "pending" });
-    })
-    .delete((req, res) => {
-        return res.json({ status: "pending" });
-    });
 
-app.post('/api/users', (req, res) => {
-    const body = req.body;
-    if(!body || !body.first_name || !body.last_name || !body.email || !body.gender || !body.job_title){
-        return res.status(400).json({ msg : "All fields are required    "})
-    }
-    users.push({ ...body, id: users.length + 1 });
+// GET SINGLE USER
+.get(async (req, res) => {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    return res.json(user);
+})
 
-    fs.writeFile('./MOCK_DATA.json', JSON.stringify(users), (err) => {
-        if (err) {
-            return res.json({ status: "error" });
-        }
-        return res.status(201).json({ status: "success", id: users.length });
-    });
+// UPDATE USER
+.patch(async (req, res) => {
+    const updatedUser = await User.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        { new: true }
+    );
+
+    return res.json(updatedUser);
+})
+
+// DELETE USER
+.delete(async (req, res) => {
+    await User.findByIdAndDelete(req.params.id);
+    return res.json({ status: "User deleted successfully" });
 });
+
+
+// CREATE USER
+app.post('/api/users', async (req, res) => {
+    const body = req.body;
+
+    if (!body.firstName || !body.email) {
+        return res.status(400).json({ msg: "FirstName and Email are required" });
+    }
+
+    const result = await User.create(body);
+
+    return res.status(201).json(result);
+});
+
 
 // Server
 app.listen(4000, () => {
-    console.log('Server Started');
+    console.log('Server Started on Port 4000');
 });
