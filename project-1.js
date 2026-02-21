@@ -6,6 +6,7 @@ const app = express();
 
 //connection 
 connectMongoDb('mongodb://127.0.0.1:27017/project-1')
+.then(() => console.log("MongoDB connected"));
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
@@ -13,7 +14,7 @@ app.use(express.json());
 app.use(logReqRes('log.txt'))
 
 //Routes
-app.use("./user",userRouter)
+app.use("/api/users",userRouter)
  
 app.listen(4000, () => {
     console.log('Server Started on Port 4000');
